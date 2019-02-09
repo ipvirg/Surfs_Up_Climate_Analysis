@@ -8,7 +8,7 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 
-from flask import Flask, jsonify, render_template, redirect
+from flask import Flask, jsonify
 
 #################################################
 # Database Setup
@@ -17,6 +17,7 @@ engine = create_engine("sqlite:///Resources/hawaii.sqlite")
 
 # reflect an existing database into a new model
 Base = automap_base()
+
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
@@ -43,99 +44,62 @@ app = Flask(__name__)
 def welcome():
     """List all available api routes."""
     return (
-        f"Available Routes:<br/>"
+        f"Hawaii Surfs Up Available API Routes:<br/>"
         f"/api/v1.0/precipitation<br>"
         f"/api/v1.0/stations<br>"
         f"/api/v1.0/tobs<br>"
-        f"/api/v1.0/<start><br>"
-        f"/api/v1.0<start>/<end><br>"
+        f"/api/v1.0/start_date/<br>"
+        f"/api/v1.0/start_date/end_date<br>"
+        f"Note: start_date and end_date would be in 'YYYY-MM-DD' format.<br>"
     )
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
-    # Query for the dates and temperature observations from the last year.
     # Query results to a Dictionary using `date` as the key and `prcp` as the value.
-    results = session.query(Measurement.date,Measurement.prcp).filter(Measurement.date).all()
-    all_prcp = list(np.ravel(results))
-
-    #results.___dict___
-    #Create a dictionary using 'date' as the key and 'prcp' as the value.
-    """year_prcp = []
-    for result in results:
-        row = {}
-        row[Measurements.date] = row[Measurements.prcp]
-        year_prcp.append(row)"""
+    prcp_results = session.query(Measurement.date,Measurement.prcp).filter(Measurement.date).all()
+    
+    all_prcp = {}
+    for result in prcp_results:
+        date = result[0]
+        prcp = result[1]
+        all_prcp[date] = prcp
 
     return jsonify(all_prcp)
 
 @app.route("/api/v1.0/stations")
 def stations():
-	#return a json list of stations from the dataset.
-	results = session.query(Station.station).all()
+    # Return a json list of stations from the dataset.
+    station_results = session.query(Station.station).all()
 
-	all_stations = list(np.ravel(results))
+    all_stations = list(np.ravel(station_results))
 
-	return jsonify(all_stations)
+    return jsonify(all_stations)
 
 @app.route("/api/v1.0/tobs")
-def temperature():
-	#Return a json list of Temperature Observations (tobs) for the previous year
-	year_tobs = []
-	results = session.query(Measurement.tobs).filter(Measurement.date >= "08-23-2017").all()
+def prev_temp():
+    #Return a json list of Temperature Observations (tobs) for the previous year
+    prev_results = session.query(Measurement.tobs).filter(Measurement.date >= "08-23-2017").all()
+    prev_tobs = []
+    prev_tobs = list(np.ravel(prev_results))
 
-	year_tobs = list(np.ravel(results))
+    return jsonify(prev_tobs)
 
-	return jsonify(year_tobs)
+@app.route("/api/v1.0/<start_date>/")
+def temp_start(start_date):
+    # Query using start date
+    start_results = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= start_date).first()
+    # Create dictionary from results
+    temp_start_dict = {"TMIN": start_results[0], "TMAX": start_results[1], "TAVG": start_results[2]}
+    return jsonify(temp_start_dict)
 
-@app.route("/api/v1.0/<start>")
-def start_trip_temp(start_date):
-	start_trip = []
-
-	results_min = session.query(func.min(Measurement.tobs)).filter(Measurement.date == start_date).all()
-	results_max = session.query(func.max(Measurement.tobs)).filter(Measurement.date == start_date).all()
-	results_avg = session.query(func.avg(Measurement.tobs)).filter(Measurement.date == start_date).all()
-
-	start_trip = list(np.ravel(results_min,results_max, results_avg))
-
-	return jsonify(start_trip)
-
-def greater_start_date(start_date):
-
-	start_trip_date_temps = []
-
-	results_min = session.query(func.min(Measurement.tobs)).filter(Measurement.date >= start_date).all()
-	results_max = session.query(func.max(Measurement.tobs)).filter(Measurement.date >= start_date).all()
-	results_avg = session.query(func.avg(Measurement.tobs)).filter(Measurement.date >= start_date).all()
-
-	start_trip_date_temps = list(np.ravel(results_min,results_max, results_avg))
-
-	return jsonify(start_trip_date_temps)
-
-@app.route("/api/v1.0/<start>/<end>")
-
-def start_end_trip(start_date, end_date):
-
-	start_end_trip_temps = []
-
-	results_min = session.query(func.min(Measurement.tobs)).filter(Measurement.date == start_date, Measurement.date == end_date).all()
-	results_max = session.query(func.max(Measurement.tobs)).filter(Measurement.date == start_date, Measurement.date == end_date).all()
-	results_avg = session.query(func.avg(Measurement.tobs)).filter(Measurement.date == start_date, Measurement.date == end_date).all()
-
-	start_end_trip_temps = list(np.ravel(results_min,results_max, results_avg))
-
-	return jsonify(start_end_trip_temps)
-
-def start_end_trip(start_date, end_date):
-
-	round_trip_temps = []
-
-	results_min = session.query(func.min(Measurement.tobs)).filter(Measurement.date >= start_date, Measurement.date >= end_date).all()
-	results_max = session.query(func.max(Measurement.tobs)).filter(Measurement.date >= start_date, Measurement.date >= end_date).all()
-	results_avg = session.query(func.avg(Measurement.tobs)).filter(Measurement.date >= start_date, Measurement.date >= end_date).all()
-
-	round_trip_temps = list(np.ravel(results_min,results_max, results_avg))
-
-	return jsonify(round_trip_temps)
+#start/end date route
+@app.route("/api/v1.0/<start_date>/<end_date>/")
+def temp_start_end(start_date, end_date):
+    # Query using start date and end date
+    start_end_results = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= start_date, Measurement.date <= end_date).first()
+    # Create dictionary from results
+    temp_end_dict = {"TMIN": start_end_results[0], "TMAX": start_end_results[1], "TAVG": start_end_results[2]}
+    return jsonify(temp_end_dict)
 
 if __name__ == '__main__':
     app.run(debug=True)
