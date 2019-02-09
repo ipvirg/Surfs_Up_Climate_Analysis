@@ -48,7 +48,7 @@ def welcome():
         f"/api/v1.0/precipitation<br>"
         f"/api/v1.0/stations<br>"
         f"/api/v1.0/tobs<br>"
-        f"/api/v1.0/start_date/<br>"
+        f"/api/v1.0/start_date<br>"
         f"/api/v1.0/start_date/end_date<br>"
         f"Note: start_date and end_date would be in 'YYYY-MM-DD' format.<br>"
     )
@@ -77,14 +77,15 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def prev_temp():
-    #Return a json list of Temperature Observations (tobs) for the previous year
-    prev_results = session.query(Measurement.tobs).filter(Measurement.date >= "08-23-2017").all()
+    # Return a json list of Temperature Observations (tobs) for the previous year - 
+    # Using 2016-08-23 as previous year date start point since the last data point is 2017-08-23
+    prev_results = session.query(Measurement.tobs).filter(Measurement.date >= "2016-08-23").all()
     prev_tobs = []
     prev_tobs = list(np.ravel(prev_results))
 
     return jsonify(prev_tobs)
 
-@app.route("/api/v1.0/<start_date>/")
+@app.route("/api/v1.0/<start_date>")
 def temp_start(start_date):
     # Query using start date
     start_results = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= start_date).first()
@@ -93,7 +94,7 @@ def temp_start(start_date):
     return jsonify(temp_start_dict)
 
 #start/end date route
-@app.route("/api/v1.0/<start_date>/<end_date>/")
+@app.route("/api/v1.0/<start_date>/<end_date>")
 def temp_start_end(start_date, end_date):
     # Query using start date and end date
     start_end_results = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)).filter(Measurement.date >= start_date, Measurement.date <= end_date).first()
