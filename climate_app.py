@@ -93,7 +93,6 @@ def temp_start(start_date):
     temp_start_dict = {"TMIN": start_results[0], "TMAX": start_results[1], "TAVG": start_results[2]}
     return jsonify(temp_start_dict)
 
-#start/end date route
 @app.route("/api/v1.0/<start_date>/<end_date>")
 def temp_start_end(start_date, end_date):
     # Query using start date and end date
